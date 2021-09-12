@@ -18,7 +18,7 @@
    npm install
    ```
 
-
+> **Zorg ervoor dat je jouw riot API key invuld in het bestand: server\constants\constants.js**
 ## Server
 Open de terminal.
 Run the server met:
@@ -37,7 +37,7 @@ npm run dev
 Hierna is de site beschikbaar op localhost:3000 
 
 
-## URl's
+## URL's
 ### / (http://localhost:3000/)
 De standaard website.
 ### /generate/challenger (http://localhost:3000/generate/challenger)
