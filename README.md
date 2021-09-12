@@ -38,7 +38,7 @@ Hierna is de site beschikbaar op localhost:3000
 
 
 ## URl's
-### / (localhost:3000/)
+### / (http://localhost:3000/)
 De standaard website.
 ### /generate/challenger (http://localhost:3000/generate/challenger)
 Een lijst met challenger spelers. 
