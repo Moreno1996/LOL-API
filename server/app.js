@@ -1,120 +1,36 @@
-import express from 'express'
-import mongo from 'mongodb'
-import { Kayn, REGIONS } from 'kayn'
-import { convertChampList, getType } from "./methods/league_methods.js"
+import cors from "cors";
+import express from "express";
+import { createChallengerEndpoints } from "./api_endpoints/challenger_endpoints.js";
+import { createChampionEndpoints } from "./api_endpoints/champion_endpoints.js";
+import { createMatchEndpoints } from "./api_endpoints/match_endpoints.js";
+import { createSummonerEndpoints } from "./api_endpoints/summoner_endpoints.js";
+import { getTimeline } from "./functions.js";
 var app = express();
+
+app.use(cors());
+app.set("json spaces", 10);
+
 var port = 3003;
-var MongoClient = mongo.MongoClient;
-var url = "mongodb://localhost:27017/";
-var riotAPIKey = "RGAPI-df595ac6-db9d-4785-b22c-28d5a9a02ee8";
-const kayn = Kayn(riotAPIKey)({
-    region: REGIONS.EUROPE_WEST,
-    debugOptions: {
-        isEnabled: true,
-        showKey: false,
-    },
 
-})
-const getChampions = async () => {
-    let champions = await kayn.DDragon.Champion.list();
-    champions = champions?.data;
-    champions = Object.values(champions)
-
-    return champions;
-}
-const storeChampions = (champions) => {
-    MongoClient.connect(url, function (err, db) {
-        if (err) throw err;
-        var dbo = db.db("league");
-        for (const champ of champions) {
-            dbo.collection("champions").updateOne({ key: champ?.key }, { $set: champ }, { upsert: true });
-        }
-        db.close();
-
-    });
-}
-const storeSummoner = (summoner) => {
-    MongoClient.connect(url, function (err, db) {
-        if (err) throw err;
-        var dbo = db.db("league");
-        dbo.collection("summoner").updateOne({ accountId: summoner?.accountId }, { $set: summoner }, { upsert: true });
-        // dbo.collection("summoner").insertOne(summoner);
-
-        db.close();
-
-    });
-}
-
-const storeMatches = (matches) => {
-    MongoClient.connect(url, function (err, db) {
-        if (err) throw err;
-        var dbo = db.db("league");
-        for (const match of matches) {
-            dbo.collection("matches").updateOne({ gameId: match?.gameId }, { $set: match }, { upsert: true });
-        }
-        db.close();
-    });
-}
-const storeMatch = (match) => {
-    MongoClient.connect(url, function (err, db) {
-        if (err) throw err;
-        var dbo = db.db("league");
-        var myobj = match;
-        dbo.collection("matches").insertOne(myobj, function (err, res) {
-            if (err) throw err;
-            console.log("1 document inserted");
-            db.close();
-        });
-    });
-}
-
+process.on("unhandledRejection", (reason, p) => {
+  console.log("Unhandled Rejection at: Promise", p, "reason:", reason);
+  // application specific logging, throwing an error, or other logic here
+});
 app.get("/", (req, res) => {
-    res.send("Hello World");
+  res.send("Hello World");
 });
-app.get("/update/champions", async (req, res) => {
-    const champions = await getChampions();
-    res.send("<pre>" + JSON.stringify(champions, null, 2) + "</pre>");
-    storeChampions(champions);
-});
-app.get("/matches", async (req, res) => {
-    const data = await getMatches(req?.query?.user);
+createChampionEndpoints(app);
+createChallengerEndpoints(app);
+createSummonerEndpoints(app);
+createMatchEndpoints(app);
 
-    const matches = extendMatches(data.matches);
-    storeMatches(matches)
-    res.send("<pre>" + JSON.stringify(matches, null, 2) + "</pre>");
+app.get("/timeline/:matchID", async (req, res) => {
+  var matchID = req.params.matchID;
+
+  const data = await getTimeline(matchID);
+  res.json(data);
 });
 
 app.listen(port, () => {
-    console.log("Server listening on port " + port);
+  console.log("Server listening on port " + port);
 });
-
-app.get("/addname", (req, res1) => {
-    MongoClient.connect(url, function (err, db) {
-        if (err) throw err;
-        var dbo = db.db("league");
-        var myobj = { name: "Company Inc", address: "Highway 37" };
-        dbo.collection("matches").insertOne(myobj, function (err, res) {
-            if (err) throw err;
-            res1.send("1 document inserted" + JSON.stringify(myobj));
-
-            console.log("1 document inserted");
-            db.close();
-        });
-    });
-});
-
-
-const extendMatches = (matchlist) => {
-    return (matchlist || []).map((item) => ({ ...item, "matchType": getType(item.queue) })) || matchlist
-
-}
-const getMatches = async (username = "MldGet") => {
-    console.log("getMatches ", username)
-    const summoner = await kayn.Summoner.by.name(username);
-    storeSummoner(summoner);
-    const summonerId = summoner.accountId;
-    let matchlist = await kayn.Matchlist.by.accountID(summonerId).query({
-        queue: [420],
-    })
-    return matchlist
-}

@@ -9,3 +9,5 @@ site/.next/
 
 # production
 /build
+*dragontail*
+/site/public/champion
